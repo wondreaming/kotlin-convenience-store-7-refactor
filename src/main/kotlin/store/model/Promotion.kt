@@ -8,4 +8,9 @@ data class Promotion(
     val get: Int,
     val startDateTime: LocalDateTime,
     val endDateTime: LocalDateTime,
-)
+) {
+    fun isActive(): Boolean {
+        val today: LocalDateTime = LocalDateTime.now()
+        return today in startDateTime..endDateTime
+    }
+}

@@ -44,7 +44,6 @@ class BuyingValidator {
                 realQuality += storageProduct.quantity
             }
         }
-        println("작동함? ${quantity.toInt()} $realQuality")
         require(quantity.toInt() <= realQuality) { BuyingErrorType.OVER }
     }
 }
