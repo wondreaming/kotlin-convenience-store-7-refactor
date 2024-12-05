@@ -23,6 +23,14 @@ class StoreController(
         val userBuying = getUserBuying(storageProducts)
         val userBuyingProducts = parseUserBuying(userBuying)
         val promotion1 = checkPromotionQuantity(storageProducts, userBuyingProducts)
+        val promotion2 = checkNonPromotion(storageProducts, promotion1)
+        val isMembership = getMembership()
+    }
+
+    private fun getMembership(): Boolean {
+        println("멤버십 할인을 받으시겠습니까? (Y/N)")
+        val yesOrNo = getYesOrNo()
+        return yesOrNo == "Y"
     }
 
     private fun getUserBuying(storageProducts: List<Product>): String {
@@ -53,6 +61,28 @@ class StoreController(
                 val yesOrNo = getYesOrNo()
                 if (yesOrNo == "Y") {
                     val newQuantity = (userBuyingProduct[1].toInt() + 1).toString()
+                    updatedUserBuyingProducts.add(listOf(userBuyingProduct[0], newQuantity))
+                    continue
+                }
+            }
+            updatedUserBuyingProducts.add(userBuyingProduct)
+        }
+        return updatedUserBuyingProducts
+    }
+
+    private fun checkNonPromotion(
+        storageProducts: List<Product>,
+        userBuyingProducts: List<List<String>>
+    ): List<List<String>> {
+        val updatedUserBuyingProducts = mutableListOf<List<String>>()
+        for (userBuyingProduct in userBuyingProducts) {
+            val product = storageProducts.find { it.name == userBuyingProduct[0] && it.promotion != null }
+            if (product != null && product.quantity < userBuyingProduct[1].toInt()) {
+                val quantity = userBuyingProduct[1].toInt() - product.quantity
+                println("현재 ${userBuyingProduct[0]} ${quantity}개는 프로모션 할인이 적용되지 않습니다. 그래도 구매하시겠습니까? (Y/N)")
+                val yesOrNo = getYesOrNo()
+                if (yesOrNo == "N") {
+                    val newQuantity = (userBuyingProduct[1].toInt() - quantity).toString()
                     updatedUserBuyingProducts.add(listOf(userBuyingProduct[0], newQuantity))
                     continue
                 }
