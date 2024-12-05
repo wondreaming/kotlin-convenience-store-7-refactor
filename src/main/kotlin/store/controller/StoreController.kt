@@ -6,6 +6,7 @@ import store.controller.domain.UserInteractionController
 import store.controller.validator.BuyingValidator
 import store.controller.validator.YesOrNoValidator
 import store.model.Product
+import store.util.DecimalUtil.getDecimalFormat
 import store.util.retryWhenNoException
 import store.view.InputView
 
@@ -18,13 +19,18 @@ class StoreController(
     private val yesOrNoValidator: YesOrNoValidator = YesOrNoValidator(),
 ) {
     fun run() {
+        var again = true
         val promotions = promotionAdapter.loadPromotion()
-        val storageProducts = productAdapter.run(promotions)
-        val userBuying = getUserBuying(storageProducts)
-        val userBuyingProducts = parseUserBuying(userBuying)
-        val promotion1 = checkPromotionQuantity(storageProducts, userBuyingProducts)
-        val promotion2 = checkNonPromotion(storageProducts, promotion1)
-        val isMembership = getMembership()
+        var storageProducts = productAdapter.run(promotions)
+        while (again) {
+            val userBuying = getUserBuying(storageProducts)
+            val userBuyingProducts = parseUserBuying(userBuying)
+            val promotion1 = checkPromotionQuantity(storageProducts, userBuyingProducts)
+            val promotion2 = checkNonPromotion(storageProducts, promotion1)
+            val isMembership = getMembership()
+            storageProducts = printReceipt(storageProducts, promotion2, isMembership)
+            again = buyAgain()
+        }
     }
 
     private fun getMembership(): Boolean {
@@ -99,5 +105,50 @@ class StoreController(
             yesOrNo
         }
         return yesOrNo
+    }
+
+    private fun printReceipt(storageProducts: List<Product>, products: List<List<String>>, isMember: Boolean): List<Product> {
+        var totalPrice = 0
+        var totalAmount = 0
+        var promotionPrice = 0
+        println("===========W 편의점=============")
+        println("상품명\t\t수량\t금액")
+        for (product in products) {
+            val price = storageProducts.find { it.name == product[0] }?.price
+            val pay = getDecimalFormat(price!! * product[1].toInt())
+            println("${product[0]} ${product[1]} ${pay}")
+            totalPrice += price * product[1].toInt()
+            totalAmount += product[1].toInt()
+            storageProducts.find { it.name == product[0] }!!.reduceQuantity(product[1].toInt())
+        }
+        println("===========증\t정=============")
+        for (product in products) {
+            val promotionProduct = storageProducts.find { it.name == product[0] }
+            if (promotionProduct?.promotion != null && promotionProduct.promotion.isActive()) {
+                val buy = storageProducts.find { it.name == product[0] }?.promotion?.buy
+                val free = product[1].toInt() / buy!!
+                println("${product[0]} $free")
+                promotionPrice += storageProducts.find { it.name == product[0] }?.price!! * free
+            }
+        }
+        var memberPrice = (Math.floor((totalPrice - promotionPrice) * 0.3 / 1000) * 1000).toInt()
+        if (memberPrice > 8000) {
+            memberPrice = 8000
+        }
+        println("==============================")
+        println("총구매액 ${totalAmount} ${getDecimalFormat(totalPrice)}")
+        println("행사할인 -${getDecimalFormat(promotionPrice)}")
+        if (isMember) println("멤버십할인 -${memberPrice}") else println("멤버십할인 -0")
+        if (isMember) println("내실돈 ${getDecimalFormat((totalPrice - promotionPrice - memberPrice).toInt())}") else println(
+            "내실돈 ${getDecimalFormat(totalPrice - promotionPrice)}"
+        )
+
+        return storageProducts
+    }
+
+    private fun buyAgain(): Boolean {
+        println("\n감사합니다. 구매하고 싶은 다른 상품이 있나요? (Y/N)")
+        val yesOrNo = getYesOrNo()
+        return yesOrNo == "Y"
     }
 }

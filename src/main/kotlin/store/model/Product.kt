@@ -3,7 +3,7 @@ package store.model
 data class Product(
     val name: String,
     val price: Int,
-    val quantity: Int,
+    var quantity: Int,
     val promotion: Promotion?
 ) {
     fun checkPromotionQuantity(userQuantity: Int): Int {
@@ -14,5 +14,9 @@ data class Product(
                 ?: 0
         }
         return 0
+    }
+
+    fun reduceQuantity(count: Int) {
+        quantity -= count
     }
 }
