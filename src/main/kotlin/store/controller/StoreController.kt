@@ -34,7 +34,7 @@ class StoreController(
     }
 
     private fun getMembership(): Boolean {
-        println("멤버십 할인을 받으시겠습니까? (Y/N)")
+        println("\n멤버십 할인을 받으시겠습니까? (Y/N)")
         val yesOrNo = getYesOrNo()
         return yesOrNo == "Y"
     }
@@ -84,8 +84,8 @@ class StoreController(
         for (userBuyingProduct in userBuyingProducts) {
             val product = storageProducts.find { it.name == userBuyingProduct[0] && it.promotion != null }
             if (product != null && product.quantity < userBuyingProduct[1].toInt()) {
-                val quantity = userBuyingProduct[1].toInt() - product.quantity
-                println("현재 ${userBuyingProduct[0]} ${quantity}개는 프로모션 할인이 적용되지 않습니다. 그래도 구매하시겠습니까? (Y/N)")
+                val quantity = userBuyingProduct[1].toInt() - (product.quantity - product.promotion!!.get) //
+                println("\n현재 ${userBuyingProduct[0]} ${quantity}개는 프로모션 할인이 적용되지 않습니다. 그래도 구매하시겠습니까? (Y/N)")
                 val yesOrNo = getYesOrNo()
                 if (yesOrNo == "N") {
                     val newQuantity = (userBuyingProduct[1].toInt() - quantity).toString()
@@ -107,7 +107,11 @@ class StoreController(
         return yesOrNo
     }
 
-    private fun printReceipt(storageProducts: List<Product>, products: List<List<String>>, isMember: Boolean): List<Product> {
+    private fun printReceipt(
+        storageProducts: List<Product>,
+        products: List<List<String>>,
+        isMember: Boolean
+    ): List<Product> {
         var totalPrice = 0
         var totalAmount = 0
         var promotionPrice = 0
@@ -119,14 +123,15 @@ class StoreController(
             println("${product[0]} ${product[1]} ${pay}")
             totalPrice += price * product[1].toInt()
             totalAmount += product[1].toInt()
-            storageProducts.find { it.name == product[0] }!!.reduceQuantity(product[1].toInt())
+//            storageProducts.find { it.name == product[0] }!!.reduceQuantity(product[1].toInt())
         }
         println("===========증\t정=============")
         for (product in products) {
             val promotionProduct = storageProducts.find { it.name == product[0] }
             if (promotionProduct?.promotion != null && promotionProduct.promotion.isActive()) {
                 val buy = storageProducts.find { it.name == product[0] }?.promotion?.buy
-                val free = product[1].toInt() / buy!!
+                val free =
+                    if (promotionProduct.quantity >= product[1].toInt()) {product[1].toInt() / (buy!! + 1)} else promotionProduct.quantity / (buy!! + 1)
                 println("${product[0]} $free")
                 promotionPrice += storageProducts.find { it.name == product[0] }?.price!! * free
             }
@@ -138,11 +143,17 @@ class StoreController(
         println("==============================")
         println("총구매액 ${totalAmount} ${getDecimalFormat(totalPrice)}")
         println("행사할인 -${getDecimalFormat(promotionPrice)}")
-        if (isMember) println("멤버십할인 -${memberPrice}") else println("멤버십할인 -0")
+        if (isMember) println("멤버십할인 -${getDecimalFormat(memberPrice)}") else println("멤버십할인 -0")
         if (isMember) println("내실돈 ${getDecimalFormat((totalPrice - promotionPrice - memberPrice).toInt())}") else println(
             "내실돈 ${getDecimalFormat(totalPrice - promotionPrice)}"
         )
-
+        for (product in products) {
+            val count = storageProducts.find { it.name == product[0] }!!.reduceQuantity(product[1].toInt())
+            if (count != 0) {
+                val nonPromotionProduct = storageProducts.find { it.name == product[0] && it.promotion == null }
+                nonPromotionProduct?.reduceQuantity(count)
+            }
+        }
         return storageProducts
     }
 

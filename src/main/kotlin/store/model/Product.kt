@@ -16,7 +16,14 @@ data class Product(
         return 0
     }
 
-    fun reduceQuantity(count: Int) {
-        quantity -= count
+    fun reduceQuantity(count: Int): Int {
+        if (quantity - count >= 0) {
+            quantity -= count
+            return 0
+        } else {
+            val result = count - quantity
+            quantity = 0
+            return result
+        }
     }
 }
